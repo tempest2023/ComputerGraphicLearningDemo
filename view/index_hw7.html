@@ -1,0 +1,172 @@
+<head>
+  <style type='text/css'>
+    #text {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 200px;
+      height: auto;
+      border: 1px solid #000;
+      box-shadow: 1px 1px 2px 2px #8E9D9E;
+    }
+
+    #param {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 250px;
+      height: auto;
+      border: 1px solid #000;
+      box-shadow: 1px 1px 2px 2px #8E9D9E;
+    }
+  </style>
+</head>
+
+<body>
+  <div id='text'>
+    11612717 任涛 <br />
+    Drag mouse to change view.
+  </div>
+  <div id='param'>
+    Camera: (x,y,z) <br />
+    SpotLight: (x,y,z,r) I <br />
+    AmbientLight: (x,y,z) I <br />
+  </div>
+</body>
+<script src="https://cdn.bootcss.com/three.js/102/three.min.js"></script>
+<script src="/static/js/OrbitControls.js"></script>
+<!-- <script src="http://storygame.top/resources/js/OrbitControls.js"></script> -->
+<script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+
+
+
+
+
+<script type='text/javascript'>
+  var scene = new THREE.Scene();
+  var geometry = new THREE.BoxGeometry(100, 100, 100); //创建一个立方体几何对象Geometry
+  var material = new THREE.MeshPhongMaterial({
+    color: 0x1A6613,
+    transparent: true,
+  });
+  // var mesh = new THREE.Mesh(geometry, material); //网格模型对象Mesh
+  // mesh.castShadow = true;
+  // mesh.position.set(150, 0, 0);
+  // var group = new THREE.Group();
+  // group.position.set(0, 20, 0);
+  // group.add(mesh);
+  // scene.add(group);
+  // console.log('本地坐标', mesh.position);
+
+
+  // var axisHelper = new THREE.AxisHelper(1000);
+  // scene.add(axisHelper);
+  /**
+   * 光源设置
+   */
+  //点光源
+  // var point = new THREE.PointLight(0xeeeeee);
+  // point.position.set(400, 300, 200); //点光源位置
+  // scene.add(point); //点光源添加到场景中
+  //环境光
+  var ambient = new THREE.AmbientLight(0x999999);
+  scene.add(ambient);
+
+  var spotLight = new THREE.SpotLight(0xffffff);
+  // 设置聚光光源位置
+  spotLight.position.set(200, 200, -200);
+  // 设置聚光光源发散角度
+  spotLight.angle = Math.PI / 6
+  scene.add(spotLight); //光对象添加到scene场景中
+
+  var cubeGeometry = new THREE.BoxGeometry(100, 100, 100);
+  var cylinderGeometry = new THREE.CylinderGeometry(50, 50, 80, 32);
+  cylinderGeometry.translate(100, 0, 100);
+
+  var sphereGeometry = new THREE.SphereGeometry(50, 50, 40);
+  sphereGeometry.translate(-100, 0, -100);
+  let sphereMaterial = new THREE.MeshPhongMaterial({
+    map: THREE.ImageUtils.loadTexture('/static/image/brick.jpg')
+  });
+  let sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+  scene.add(sphereMesh);
+
+
+  // TextureLoader创建一个纹理加载器对象，可以加载图片作为几何体纹理
+  var textureLoader = new THREE.TextureLoader();
+  // 执行load方法，加载纹理贴图成功后，返回一个纹理对象Texture
+  textureLoader.load('/static/image/boxTexture.jpg', function(texture) {
+    let material = new THREE.MeshLambertMaterial({
+      // color: 0x0000ff,
+      // 设置颜色纹理贴图：Texture对象作为材质map属性的属性值
+      map: texture, //设置颜色贴图属性值
+    }); //材质对象Material
+
+    let cubeMesh = new THREE.Mesh(cubeGeometry, material); //网格模型对象Mesh
+    scene.add(cubeMesh); //网格模型添加到场景中
+
+  });
+  textureLoader.load('/static/image/asphalt.jpg', function(texture) {
+    let material = new THREE.MeshLambertMaterial({
+      // color: 0x0000ff,
+      // 设置颜色纹理贴图：Texture对象作为材质map属性的属性值
+      map: texture, //设置颜色贴图属性值
+    }); //材质对象Material
+    let cylinderMesh = new THREE.Mesh(cylinderGeometry, material);
+    scene.add(cylinderMesh);
+  });
+
+
+
+
+
+  /**
+   * 相机设置
+   */
+  var width = window.innerWidth; //窗口宽度
+  var height = window.innerHeight; //窗口高度
+  var k = width / height; //窗口宽高比
+  var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+  //创建相机对象
+  var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
+  camera.position.set(-200, 200, 300); //设置相机位置
+  camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
+
+  // var axisHelper = new THREE.AxisHelper(800);
+  // scene.add(axisHelper);
+
+  /**
+   * 创建渲染器对象
+   */
+  var renderer = new THREE.WebGLRenderer();
+  renderer.setSize(width, height); //设置渲染区域尺寸
+  renderer.setClearColor(0xffffff, 1); //设置背景颜色
+  document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
+  //执行渲染操作   指定场景、相机作为参数
+  renderer.render(scene, camera);
+
+
+  var controls = new THREE.OrbitControls(camera); //创建控件对象
+  // controls.addEventListener('change', renderer);
+
+  // 50fps , 20ms 渲染一次
+  function updateAnimation() {
+    requestAnimationFrame(updateAnimation);
+    renderer.render(scene, camera);
+  }
+
+  $(document).ready(function() {
+    $('canvas').scroll((e) => {
+      e.preventDefault();
+    });
+    $("body").mousemove((e) => {
+      let x = event.clientX;
+      let y = event.clientY;
+      let t = 'camera: (' + (camera.position.x).toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2) + ')';
+      t += "<br />SpotLight: (" + spotLight.position.x + "," + spotLight.position.y + "," + spotLight.position.z + ") I: 0xffffff";
+      t += "<br />AmbientLight: 0x999999";
+      $('#param').html(t);
+    })
+  });
+  updateAnimation();
+</script>

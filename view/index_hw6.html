@@ -1,0 +1,151 @@
+<head>
+  <style type='text/css'>
+
+  </style>
+</head>
+<div style='position:absolute;top:20px;left:20px;width:auto;height:auto;border:1px solid #000;padding:5px;'>
+  ↑ move in y direction<br />
+  ↓ move in -y direction<br />
+  ← move in x direction<br />
+  → move in -x direction<br />
+  z move in z direction <br />
+  x move in -x direction <br />
+  And mouse will change camera too.<br />
+  Diffuse Light Cube -- made by RenTao 11612717
+</div>
+<div id='panel' style='position:absolute;top:20px;right:20px; width:auto;height:auto;border:1px solid #000;padding:5px;'>
+
+  mouse position: (700,400) <br />
+  camera position:(200,200,200)
+</div>
+
+<script src="https://cdn.bootcss.com/three.js/102/three.min.js"></script>
+<script src="/static/js/OrbitControls.js"></script>
+<script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+
+
+
+
+
+<script type='text/javascript'>
+  var scene = new THREE.Scene();
+  var geometry = new THREE.BoxGeometry(100, 100, 100); //创建一个立方体几何对象Geometry
+  var material = new THREE.MeshPhongMaterial({
+    color: 0x1A6613,
+    transparent: true,
+  });
+  var mesh = new THREE.Mesh(geometry, material); //网格模型对象Mesh
+  scene.add(mesh);
+  var geometry2 = new THREE.SphereGeometry(40, 40, 40); //创建一个球体几何对象
+  var material2 = new THREE.MeshPhongMaterial({
+    color: 0xF45E38
+  });
+  geometry2.translate(100, 200, 200);
+  var mesh2 = new THREE.Mesh(geometry2, material2);
+  scene.add(mesh2);
+
+  var geometry3 = new THREE.IcosahedronGeometry(50);
+  var material3 = new THREE.MeshPhongMaterial({
+    color: 0x3D91EB
+  });
+  geometry3.translate(-100, 150, -100);
+  var mesh3 = new THREE.Mesh(geometry3, material3);
+  scene.add(mesh3);
+
+  // var axisHelper = new THREE.AxisHelper(1000);
+  // scene.add(axisHelper);
+  /**
+   * 光源设置
+   */
+  //点光源
+  var point = new THREE.PointLight(0xeeeeee);
+  point.position.set(400, 300, 200); //点光源位置
+  scene.add(point); //点光源添加到场景中
+  //环境光
+  var ambient = new THREE.AmbientLight(0x333333);
+  scene.add(ambient);
+  // console.log(scene)
+  // console.log(scene.children)
+  /**
+   * 相机设置
+   */
+  var width = window.innerWidth; //窗口宽度
+  var height = window.innerHeight; //窗口高度
+  var k = width / height; //窗口宽高比
+  var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+  //创建相机对象
+  var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
+  camera.position.set(200, 200, 300); //设置相机位置
+  camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
+
+  var axisHelper = new THREE.AxisHelper(800);
+  scene.add(axisHelper);
+
+  /**
+   * 创建渲染器对象
+   */
+  var renderer = new THREE.WebGLRenderer();
+  renderer.setSize(width, height); //设置渲染区域尺寸
+  renderer.setClearColor(0xffffff, 1); //设置背景颜色
+  document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
+  //执行渲染操作   指定场景、相机作为参数
+  renderer.render(scene, camera);
+
+  var controls = new THREE.OrbitControls(camera); //创建控件对象
+  // controls.addEventListener('change', renderer);
+
+  // 50fps , 20ms 渲染一次
+  function updateAnimation() {
+    requestAnimationFrame(updateAnimation);
+    renderer.render(scene, camera);
+  }
+
+  $(document).ready(function() {
+    $('canvas').scroll((e) => {
+      e.preventDefault();
+    })
+    $('canvas').mousemove((event) => {
+      var midx = 700,
+        midy = 400;
+      x = event.clientX;
+      y = event.clientY;
+      // 计算摄像头位置
+
+      let t = 'mouse position: (' + x + ',' + y + ') <br /> camera position: (' + (camera.position.x).toFixed(2) + ',' + camera.position.y.toFixed(2) + ',' + camera.position.z.toFixed(2) + ')';
+      $('#panel').html(t);
+    })
+
+    // $(document).keydown(function(event) {
+    //   // up
+    //   if (event.keyCode == 38) {
+    //     camera.position.y += 20;
+    //   }
+    //   //down
+    //   if (event.keyCode == 40) {
+    //     camera.position.y -= 20;
+    //   }
+    //   // left
+    //   if (event.keyCode == 37) {
+    //     camera.position.x -= 20;
+    //   }
+    //
+    //   if (event.keyCode == 39) {
+    //     camera.position.x += 20;
+    //   }
+    //   // z
+    //   if (event.keyCode == 90) {
+    //     camera.position.z += 20;
+    //   }
+    //   //x
+    //   if (event.keyCode == 88) {
+    //     camera.position.z -= 20;
+    //   }
+    //   if (event.keyCode == 38 || event.keyCode == 39 || event.keyCode == 40 || event.keyCode == 37 || event.keyCode == 90 || event.keyCode == 88) {
+    //     camera.lookAt(scene.position);
+    //     let t = 'mouse position: (x,y) <br /> camera position: (' + camera.position.x + ',' + camera.position.y + ',' + camera.position.z + ')';
+    //     $('#panel').html(t);
+    //   }
+    // });
+  });
+  updateAnimation();
+</script>
