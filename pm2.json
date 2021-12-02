@@ -1,8 +1,8 @@
 {
   "apps": [{
     "name": "demo",
-    "script": "production.js",
-    "cwd": "/Users/rentao/Documents/SUSTC/计算机图形学/lab/2/demo",
+    "script": "development.js",
+    "cwd": "/root/ComputerGraphicLearningDemo/",
     "exec_mode": "fork",
     "max_memory_restart": "1G",
     "autorestart": true,
