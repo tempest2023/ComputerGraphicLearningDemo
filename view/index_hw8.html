@@ -1,418 +1,257 @@
-<html>
-<style type='text/css'>
-  body {
-    margin: 0;
-  }
-
-  canvas {
-    width: 100vw;
-    height: 100vh;
-    display: block;
-  }
-</style>
+<head>
+  <style type='text/css'>
+    #canvas {
+      position: relative;
+      margin: 0px auto;
+    }
+  </style>
+</head>
 
 <body>
-  <canvas id="canvas"></canvas>
+  <div id="container">
+    <canvas id="reflectCanvas"></canvas>
+  </div>
 </body>
+<script src="https://cdn.bootcss.com/three.js/102/three.min.js"></script>
+<!-- <script src="/static/js/OrbitControls.js"></script> -->
+<!-- <script src="http://storygame.top/resources/js/OrbitControls.js"></script> -->
+<!-- <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script> -->
+<script id="fragment_shader" type="x-shader/x-fragment">
+  precision highp float;
 
-</html>
-<!-- vertex shader -->
-<script id="vertex-shader-3d" type="x-shader/x-vertex">
-  attribute vec4 a_position;
-attribute vec3 a_normal;
+  uniform vec2 resolution;
 
-uniform vec3 u_lightWorldPosition;
-uniform vec3 u_viewWorldPosition;
+  uniform vec3	cameraPosition;
 
-uniform mat4 u_world;
-uniform mat4 u_worldViewProjection;
-uniform mat4 u_worldInverseTranspose;
+  uniform mat4	cameraWorldMatrix;
+  uniform mat4	cameraProjectionMatrixInverse;
 
-varying vec3 v_normal;
+  const float	EPS	= 0.01;
+  const float	OFFSET	= EPS * 100.0;
 
-varying vec3 v_surfaceToLight;
-varying vec3 v_surfaceToView;
+  const vec3 lightDir = vec3( 0.8, 0.9, 0.2 );
+  /* distance functions */
+  vec3 opRep( vec3 p, float interval )
+  {
+  	vec2 q = mod( p.xz, interval ) - interval * 0.5;
+  	return(vec3( q.x, p.y, q.y ) );
+  }
 
-void main() {
-  // Multiply the position by the matrix.
-  gl_Position = u_worldViewProjection * a_position;
 
-  // orient the normals and pass to the fragment shader
-  v_normal = mat3(u_worldInverseTranspose) * a_normal;
+  float sphereDist( vec3 p, float r )
+  {
+  	return(length( opRep( p, 3.0 ) ) - r);
+  }
 
-  // compute the world position of the surfoace
-  vec3 surfaceWorldPosition = (u_world * a_position).xyz;
 
-  // compute the vector of the surface to the light
-  // and pass it to the fragment shader
-  v_surfaceToLight = u_lightWorldPosition - surfaceWorldPosition;
+  float floorDist( vec3 p )
+  {
+  	return(dot( p, vec3( 0.0, 1.0, 0.0 ) ) + 1.0);
+  }
 
-  // compute the vector of the surface to the view/camera
-  // and pass it to the fragment shader
-  v_surfaceToView = u_viewWorldPosition - surfaceWorldPosition;
-}
-</script>
-<!-- fragment shader -->
-<script id="fragment-shader-3d" type="x-shader/x-fragment">
-  precision mediump float;
 
-  // Passed in from the vertex shader.
-  varying vec3 v_normal;
-  varying vec3 v_surfaceToLight;
-  varying vec3 v_surfaceToView;
+  vec4 minVec4( vec4 a, vec4 b )
+  {
+  	return( (a.a < b.a) ? a : b);
+  }
 
-  uniform vec4 u_color;
-  uniform float u_shininess;
-  uniform vec3 u_lightDirection;
-  uniform float u_innerLimit;
-  uniform float u_outerLimit;
 
-  void main() {
-    // because v_normal is a varying it's interpolated
-    // so it will not be a unit vector. Normalizing it
-    // will make it a unit vector again
-    vec3 normal = normalize(v_normal);
+  vec3 hsv2rgb( vec3 c )
+  {
+  	vec4	K	= vec4( 1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0 );
+  	vec3	p	= abs( fract( c.xxx + K.xyz ) * 6.0 - K.www );
+  	return(c.z * mix( K.xxx, clamp( p - K.xxx, 0.0, 1.0 ), c.y ) );
+  }
 
-    vec3 surfaceToLightDirection = normalize(v_surfaceToLight);
-    vec3 surfaceToViewDirection = normalize(v_surfaceToView);
-    vec3 halfVector = normalize(surfaceToLightDirection + surfaceToViewDirection);
 
-    float dotFromDirection = dot(surfaceToLightDirection,
-                                 -u_lightDirection);
-    float limitRange = u_innerLimit - u_outerLimit;
-    float inLight = clamp((dotFromDirection - u_outerLimit) / limitRange, 0.0, 1.0);
-    float light = inLight * dot(normal, surfaceToLightDirection);
-    float specular = inLight * pow(dot(normal, halfVector), u_shininess);
+  vec3 torgb( vec3 c )
+  {
+  	return(vec3( c.x / 255.0, c.y / 255.0, c.z / 255.0 ) );
+  }
 
-    gl_FragColor = u_color;
 
-    // Lets multiply just the color portion (not the alpha)
-    // by the light
-    gl_FragColor.rgb *= light;
+  float sceneDist( vec3 p )
+  {
+  	return(min(
+  		       sphereDist( p, 1.0 ),
+  		       floorDist( p )
+  		       ) );
+  }
 
-    // Just add in the specular
-    gl_FragColor.rgb += specular;
+
+  vec4 sceneColor( vec3 p )
+  {
+  	return(minVec4(
+  	               /* 3 * 6 / 2 = 9 */
+  		       vec4( hsv2rgb( vec3( (p.z + p.x) / 9.0, 1.0, 1.0 ) ), sphereDist( p, 1.0 ) ),
+  		       vec4( vec3( 0.5 ), floorDist( p ) )
+  		       ) );
+  }
+
+
+  vec3 getNormal( vec3 p )
+  {
+  	return(normalize( vec3(
+  				  sceneDist( p + vec3( EPS, 0.0, 0.0 ) ) - sceneDist( p + vec3( -EPS, 0.0, 0.0 ) ),
+  				  sceneDist( p + vec3( 0.0, EPS, 0.0 ) ) - sceneDist( p + vec3( 0.0, -EPS, 0.0 ) ),
+  				  sceneDist( p + vec3( 0.0, 0.0, EPS ) ) - sceneDist( p + vec3( 0.0, 0.0, -EPS ) )
+  				  ) ) );
+  }
+
+
+  float getShadow( vec3 ro, vec3 rd )
+  {
+  	float	h		= 0.0;
+  	float	c		= 0.0;
+  	float	r		= 1.0;
+  	float	shadowCoef	= 0.5;
+  	for ( float t = 0.0; t < 50.0; t++ )
+  	{
+  		h = sceneDist( ro + rd * c );
+  		if ( h < EPS )
+  			return(shadowCoef);
+  		r	= min( r, h * 16.0 / c );
+  		c	+= h;
+  	}
+
+  	return(1.0 - shadowCoef + r * shadowCoef);
+  }
+
+
+  vec3 getRayColor( vec3 origin, vec3 ray, out vec3 pos, out vec3 normal, out bool hit )
+  {
+  	/* marching loop */
+  	float	dist;
+  	float	depth = 0.0;
+  	pos = origin;
+  	for ( int i = 0; i < 64; i++ )
+  	{
+  		dist	= sceneDist( pos );
+  		depth	+= dist;
+  		pos	= origin + depth * ray;
+  		if ( abs( dist ) < EPS )
+  			break;
+  	}
+  	/* hit check and calc color */
+  	vec3 color;
+  	if ( abs( dist ) < EPS )
+  	{
+  		normal = getNormal( pos );
+  		float	diffuse		= clamp( dot( lightDir, normal ), 0.1, 1.0 );
+  		float	specular	= pow( clamp( dot( reflect( lightDir, normal ), ray ), 0.0, 1.0 ), 10.0 );
+  		float	shadow		= getShadow( pos + normal * OFFSET, lightDir );
+  		color	= (sceneColor( pos ).rgb * diffuse + vec3( 0.8 ) * specular) * max( 0.5, shadow );
+  		hit	= true;
+  	} else {
+  		color = torgb( vec3( 75, 173, 228 ) );
+  	}
+
+  	return(color - pow( clamp( 0.05 * depth, 0.0, 0.6 ), 2.0 ) );
+  }
+
+
+  void main( void )
+  {
+  	/* screen position */
+  	vec2 screenPos = (gl_FragCoord.xy * 2.0 - resolution) / resolution;
+
+  	/* ray direction in normalized device coordinate */
+  	vec4 ndcRay = vec4( screenPos.xy, 1.0, 1.0 );
+
+  	/* convert ray direction from normalized device coordinate to world coordinate */
+  	vec3 ray = (cameraWorldMatrix * cameraProjectionMatrixInverse * ndcRay).xyz;
+  	ray = normalize( ray );
+
+  	/* camera position */
+  	vec3 cPos = cameraPosition;
+
+  	/* cast ray */
+  	vec3	color = vec3( 0.0 );
+  	vec3	pos, normal;
+  	bool	hit;
+  	float	alpha = 1.0;
+
+  	for ( int i = 0; i < 3; i++ )
+  	{
+  		color	+= alpha * getRayColor( cPos, ray, pos, normal, hit );
+  		alpha	*= 0.3;
+  		ray	= normalize( reflect( ray, normal ) );
+  		cPos	= pos + normal * OFFSET;
+  		if ( !hit )
+  			break;
+  	}
+  	gl_FragColor = vec4( color, 1.0 );
   }
 </script>
-<!--
-for most samples webgl-utils only provides shader compiling/linking and
-canvas resizing because why clutter the examples with code that's the same in every sample.
-See https://webglfundamentals.org/webgl/lessons/webgl-boilerplate.html
-and https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-for webgl-utils, m3, m4, and webgl-lessons-ui.
--->
-<script src="/static/js/webgl_util.js"></script>
-<script src="/static/js/m4.js"></script>
+
+<script id="vertex_shader" type="x-shader/x-vertex">
+  attribute vec3 position;
+    void main(void) {
+      gl_Position = vec4(position, 1.0);
+    }
+</script>
+
+
+
 <script type='text/javascript'>
-  "use strict";
+  var canvas = document.querySelector('#reflectCanvas');
 
-  function main() {
-    // Get A WebGL context
-    /** @type {HTMLCanvasElement} */
-    var canvas = document.querySelector("#canvas");
-    var gl = canvas.getContext("webgl");
-    if (!gl) {
-      return;
-    }
+  var canvasSize = 500;
+  var margin = (document.body.clientWidth - canvasSize) / 2;
+  canvas.style.margin = '20 ' + margin;
 
-    // setup GLSL program
-    var program = webglUtils.createProgramFromScripts(gl, ["vertex-shader-3d", "fragment-shader-3d"]);
+  // 全局渲染器
+  var renderer;
+  // 全局 场景
+  var scene;
 
-    // look up where the vertex data needs to go.
-    var positionLocation = gl.getAttribLocation(program, "a_position");
-    var normalLocation = gl.getAttribLocation(program, "a_normal");
+  // 全局摄像机
+  var camera;
 
-    // lookup uniforms
-    var worldViewProjectionLocation = gl.getUniformLocation(program, "u_worldViewProjection");
-    var worldInverseTransposeLocation = gl.getUniformLocation(program, "u_worldInverseTranspose");
-    var colorLocation = gl.getUniformLocation(program, "u_color");
-    var shininessLocation = gl.getUniformLocation(program, "u_shininess");
-    var lightDirectionLocation = gl.getUniformLocation(program, "u_lightDirection");
-    var innerLimitLocation = gl.getUniformLocation(program, "u_innerLimit");
-    var outerLimitLocation = gl.getUniformLocation(program, "u_outerLimit");
-    var lightWorldPositionLocation =
-      gl.getUniformLocation(program, "u_lightWorldPosition");
-    var viewWorldPositionLocation =
-      gl.getUniformLocation(program, "u_viewWorldPosition");
-    var worldLocation =
-      gl.getUniformLocation(program, "u_world");
 
-    // Create a buffer to put positions in
-    var positionBuffer = gl.createBuffer();
-    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    // Put geometry data into buffer
-    setGeometry(gl);
+  drawScene();
+  render();
 
-    // Create a buffer to put normals in
-    var normalBuffer = gl.createBuffer();
-    // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = normalBuffer)
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    // Put normals data into buffer
-    setNormals(gl);
+  function drawScene() {
+    renderer = new THREE.WebGLRenderer({
+      canvas: canvas
+    });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(canvasSize, canvasSize);
 
-    function radToDeg(r) {
-      return r * 180 / Math.PI;
-    }
+    scene = new THREE.Scene();
 
-    function degToRad(d) {
-      return d * Math.PI / 180;
-    }
+    camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 1, 2000);
+    camera.position.z = 4;
+    camera.position.y = 4;
+    camera.lookAt(0, 0, 0);
+    scene.add(camera);
 
-    var fieldOfViewRadians = degToRad(60);
-    var fRotationRadians = 0;
-    var shininess = 150;
-    var lightRotationX = 0;
-    var lightRotationY = 0;
-    var lightDirection = [0, 0, 1]; // this is computed in updateScene
-    var innerLimit = degToRad(10);
-    var outerLimit = degToRad(20);
+    var resolutionValue = new THREE.Vector2(canvas.width, canvas.height)
 
-    drawScene();
-
-    // Draw the scene.
-    function drawScene() {
-      webglUtils.resizeCanvasToDisplaySize(gl.canvas);
-
-      // Tell WebGL how to convert from clip space to pixels
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-      // Clear the canvas AND the depth buffer.
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-      // Turn on culling. By default backfacing triangles
-      // will be culled.
-      gl.enable(gl.CULL_FACE);
-
-      // Enable the depth buffer
-      gl.enable(gl.DEPTH_TEST);
-
-      // Tell it to use our program (pair of shaders)
-      gl.useProgram(program);
-
-      // Turn on the position attribute
-      gl.enableVertexAttribArray(positionLocation);
-
-      // Bind the position buffer.
-      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-      // Tell the position attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-      var size = 3; // 3 components per iteration
-      var type = gl.FLOAT; // the data is 32bit floats
-      var normalize = false; // don't normalize the data
-      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
-      var offset = 0; // start at the beginning of the buffer
-      gl.vertexAttribPointer(
-        positionLocation, size, type, normalize, stride, offset);
-
-      // Turn on the normal attribute
-      gl.enableVertexAttribArray(normalLocation);
-
-      // Bind the normal buffer.
-      gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-
-      // Tell the attribute how to get data out of normalBuffer (ARRAY_BUFFER)
-      var size = 3; // 3 components per iteration
-      var type = gl.FLOAT; // the data is 32bit floating point values
-      var normalize = false; // normalize the data (convert from 0-255 to 0-1)
-      var stride = 0; // 0 = move forward size * sizeof(type) each iteration to get the next position
-      var offset = 0; // start at the beginning of the buffer
-      gl.vertexAttribPointer(
-        normalLocation, size, type, normalize, stride, offset);
-
-      // Compute the projection matrix
-      var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
-      var zNear = 1;
-      var zFar = 2000;
-      var projectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
-
-      // Compute the camera's matrix
-      var camera = [100, 150, 200];
-      var target = [0, 35, 0];
-      var up = [0, 1, 0];
-      var cameraMatrix = m4.lookAt(camera, target, up);
-
-      // Make a view matrix from the camera matrix.
-      var viewMatrix = m4.inverse(cameraMatrix);
-
-      // Compute a view projection matrix
-      var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
-
-      // Draw a F at the origin
-      var worldMatrix = m4.yRotation(fRotationRadians);
-
-      // Multiply the matrices.
-      var worldViewProjectionMatrix = m4.multiply(viewProjectionMatrix, worldMatrix);
-      var worldInverseMatrix = m4.inverse(worldMatrix);
-      var worldInverseTransposeMatrix = m4.transpose(worldInverseMatrix);
-
-      // Set the matrices
-      gl.uniformMatrix4fv(worldViewProjectionLocation, false, worldViewProjectionMatrix);
-      gl.uniformMatrix4fv(worldInverseTransposeLocation, false, worldInverseTransposeMatrix);
-      gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
-
-      // Set the color to use
-      gl.uniform4fv(colorLocation, [0.2, 1, 0.2, 1]); // green
-
-      // set the light position
-      const lightPosition = [40, 60, 120];
-      gl.uniform3fv(lightWorldPositionLocation, lightPosition);
-
-      // set the camera/view position
-      gl.uniform3fv(viewWorldPositionLocation, camera);
-
-      // set the shininess
-      gl.uniform1f(shininessLocation, shininess);
-
-      // set the spotlight uniforms
-
-      // since we don't have a plane like most spotlight examples
-      // let's point the spot light at the F
-      {
-        var lmat = m4.lookAt(lightPosition, target, up);
-        lmat = m4.multiply(m4.xRotation(lightRotationX), lmat);
-        lmat = m4.multiply(m4.yRotation(lightRotationY), lmat);
-        // get the zAxis from the matrix
-        // negate it because lookAt looks down the -Z axis
-        lightDirection = [-lmat[8], -lmat[9], -lmat[10]];
-      }
-
-      gl.uniform3fv(lightDirectionLocation, lightDirection);
-      gl.uniform1f(innerLimitLocation, Math.cos(innerLimit));
-      gl.uniform1f(outerLimitLocation, Math.cos(outerLimit));
-
-      // Draw the geometry.
-      var primitiveType = gl.TRIANGLES;
-      var offset = 0;
-      var count = 6 * 6;
-      gl.drawArrays(primitiveType, offset, count);
-    }
+    var geometry = new THREE.PlaneBufferGeometry(4.0, 4.0);
+    var material = new THREE.RawShaderMaterial({
+      uniforms: {
+        resolution: {
+          value: resolutionValue
+        },
+        cameraWorldMatrix: {
+          value: camera.matrixWorld
+        },
+        cameraProjectionMatrixInverse: {
+          value: new THREE.Matrix4().getInverse(camera.projectionMatrix)
+        }
+      },
+      vertexShader: document.getElementById('vertex_shader').textContent,
+      fragmentShader: document.getElementById('fragment_shader').textContent
+    });
+    var mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    scene.add(mesh);
   }
 
-  // Fill the buffer with the values that define a letter 'F'.
-  function setGeometry(gl) {
-    var positions = new Float32Array([
-      // x-y panel
-      0, 0, 0,
-      0, 150, 0,
-      150, 0, 0,
-      0, 150, 0,
-      150, 150, 0,
-      150, 0, 0,
-
-      // x-z panel
-      0, 0, 0,
-      150, 0, 150,
-      0, 0, 150,
-      150, 0, 150,
-      0, 0, 0,
-      150, 0, 0,
-
-      // y-z panel
-      0, 0, 0,
-      0, 150, 150,
-      0, 0, 150,
-      0, 150, 150,
-      0, 0, 0,
-      0, 150, 0,
-
-      // bottom panel
-      0, 150, 0,
-      150, 150, 150,
-      0, 150, 150,
-      150, 150, 150,
-      0, 150, 0,
-      150, 150, 0,
-
-      // right panel
-      0, 0, 150,
-      0, 150, 150,
-      150, 0, 150,
-      0, 150, 150,
-      150, 150, 150,
-      150, 0, 150,
-
-      // front panel
-      150, 0, 0,
-      150, 150, 150,
-      150, 0, 150,
-      150, 150, 150,
-      150, 0, 0,
-      150, 150, 0,
-    ]);
-
-    // Center the F around the origin and Flip it around. We do this because
-    // we're in 3D now with and +Y is up where as before when we started with 2D
-    // we had +Y as down.
-
-    // We could do by changing all the values above but I'm lazy.
-    // We could also do it with a matrix at draw time but you should
-    // never do stuff at draw time if you can do it at init time.
-    var matrix = m4.xRotation(Math.PI);
-    matrix = m4.translate(matrix, -50, -75, -15);
-
-    for (var ii = 0; ii < positions.length; ii += 3) {
-      var vector = m4.transformPoint(matrix, [positions[ii + 0], positions[ii + 1], positions[ii + 2], 1]);
-      positions[ii + 0] = vector[0];
-      positions[ii + 1] = vector[1];
-      positions[ii + 2] = vector[2];
-    }
-
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+  function render(time) {
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
   }
-
-  function setNormals(gl) {
-    var normals = new Float32Array([
-      // x-y panel
-      0, 0, -1,
-      0, 0, -1,
-      0, 0, -1,
-      0, 0, -1,
-      0, 0, -1,
-      0, 0, -1,
-
-      // x-z panel
-      0, 1, 0,
-      0, 1, 0,
-      0, 1, 0,
-      0, 1, 0,
-      0, 1, 0,
-      0, 1, 0,
-
-      // y-z panel
-      -1, 0, 0,
-      -1, 0, 0,
-      -1, 0, 0,
-      -1, 0, 0,
-      -1, 0, 0,
-      -1, 0, 0,
-
-      // bottom panel
-      0, -1, 0,
-      0, -1, 0,
-      0, -1, 0,
-      0, -1, 0,
-      0, -1, 0,
-      0, -1, 0,
-
-      // right panel
-      0, 0, 1,
-      0, 0, 1,
-      0, 0, 1,
-      0, 0, 1,
-      0, 0, 1,
-      0, 0, 1,
-
-      // front panel
-      1, 0, 0,
-      1, 0, 0,
-      1, 0, 0,
-      1, 0, 0,
-      1, 0, 0,
-      1, 0, 0,
-    ]);
-    gl.bufferData(gl.ARRAY_BUFFER, normals, gl.STATIC_DRAW);
-  }
-
-  main();
 </script>
