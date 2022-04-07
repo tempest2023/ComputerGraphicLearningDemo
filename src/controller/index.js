@@ -34,7 +34,7 @@ module.exports = class extends Base {
   textAction() {
     return this.display();
   }
-  reflectionAction() {
-    return this.display();
-  }
+  // reflectionAction() {
+  //   return this.display();
+  // }
 };
