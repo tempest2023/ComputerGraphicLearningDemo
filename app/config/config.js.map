@@ -1,0 +1,17 @@
+{
+    "version": 3,
+    "sources": [
+        "../../src/config/config.js"
+    ],
+    "names": [
+        "module",
+        "exports",
+        "workers",
+        "port"
+    ],
+    "mappings": "AAAA;AACAA,OAAOC,OAAP,GAAiB;AACfC,WAAS,CADM;AAEfC,QAAM;AAFS,CAAjB",
+    "file": "../../src/config/config.js",
+    "sourcesContent": [
+        "// default config\nmodule.exports = {\n  workers: 1,\n  port: 5002\n};\n"
+    ]
+}

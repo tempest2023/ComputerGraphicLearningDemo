@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chart</title>
+  </head>
+  <body>
+    <script src="https://cdn.bootcss.com/three.js/102/three.min.js"></script>
+    <script src="/static/js/OrbitControls.js"></script>
+    <script>
+      // Define some constants and variables
+      const SCALE_MIN = 1
+      const SCALE_MAX = 10
+      const SCALE_STEP = 1
+      const INTEREST_MIN = 0.1
+      const INTEREST_MAX = 0.5
+      const INTEREST_STEP = 0.1
+      var scale, interest, profit
+
+      // Create a scene, camera and renderer
+      var scene = new THREE.Scene()
+      var camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      )
+      camera.position.z = 20
+      var renderer = new THREE.WebGLRenderer()
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      document.body.appendChild(renderer.domElement)
+
+      // Create an orbit controls object
+      var controls = new THREE.OrbitControls(camera, renderer.domElement)
+
+      // Create an axis helper to show the x, y and z axes
+      var axisHelper = new THREE.AxisHelper(10)
+      scene.add(axisHelper)
+
+      // Create a grid helper to show the x and y grid lines
+      var gridHelper = new THREE.GridHelper(10, 10)
+      gridHelper.position.set(0, 0, 0)
+      scene.add(gridHelper)
+
+      // Create a line material for the profit curve
+      var lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff })
+
+      // Create a geometry for the profit curve
+      var lineGeometry = new THREE.Geometry()
+      // Generate the profit curve data
+      for (scale = SCALE_MIN; scale <= SCALE_MAX; scale += SCALE_STEP) {
+        for (
+          interest = INTEREST_MIN;
+          interest <= INTEREST_MAX;
+          interest += INTEREST_STEP
+        ) {
+          profit = scale * interest
+          lineGeometry.vertices.push(new THREE.Vector3(scale, profit, 0))
+        }
+      }
+
+      // Create a line from the profit curve geometry
+      var line = new THREE.Line(lineGeometry, lineMaterial)
+
+      // Add the profit curve line to the scene
+      scene.add(line)
+
+      // Update the camera and controls in the animation loop
+      function animate() {
+        requestAnimationFrame(animate)
+        controls.update()
+        renderer.render(scene, camera)
+      }
+      animate()
+    </script>
+  </body>
+</html>

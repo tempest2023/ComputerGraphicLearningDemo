@@ -1,0 +1,31 @@
+{
+    "version": 3,
+    "sources": [
+        "../../src/controller/index.js"
+    ],
+    "names": [
+        "Base",
+        "require",
+        "module",
+        "exports",
+        "indexAction",
+        "display",
+        "hw3Action",
+        "hw4Action",
+        "hw5Action",
+        "hw6Action",
+        "hw7Action",
+        "hw8Action",
+        "quizAction",
+        "gameAction",
+        "interactiveCubeAction",
+        "textAction",
+        "chartAction",
+        "lightAction"
+    ],
+    "mappings": "AAAA,MAAMA,OAAOC,QAAQ,WAAR,CAAb;;AAEAC,OAAOC,OAAP,GAAiB,cAAcH,IAAd,CAAmB;AAClCI,gBAAc;AACZ,WAAO,KAAKC,OAAL,EAAP;AACD;AACDC,cAAY;AACV,WAAO,KAAKD,OAAL,EAAP;AACD;AACDE,cAAY;AACV,WAAO,KAAKF,OAAL,EAAP;AACD;AACDG,cAAY;AACV,WAAO,KAAKH,OAAL,EAAP;AACD;AACDI,cAAY;AACV,WAAO,KAAKJ,OAAL,EAAP;AACD;AACDK,cAAY;AACV,WAAO,KAAKL,OAAL,EAAP;AACD;AACDM,cAAY;AACV,WAAO,KAAKN,OAAL,EAAP;AACD;AACDO,eAAa;AACX,WAAO,KAAKP,OAAL,EAAP;AACD;AACDQ,eAAa;AACX,WAAO,KAAKR,OAAL,EAAP;AACD;AACDS,0BAAwB;AACtB,WAAO,KAAKT,OAAL,EAAP;AACD;AACDU,eAAa;AACX,WAAO,KAAKV,OAAL,EAAP;AACD;AACDW,gBAAc;AACZ,WAAO,KAAKX,OAAL,EAAP;AACD;AACDY,gBAAc;AACZ,WAAO,KAAKZ,OAAL,EAAP;AACD;AACD;AACA;AACA;AA1CkC,CAApC",
+    "file": "../../src/controller/index.js",
+    "sourcesContent": [
+        "const Base = require('./base.js');\n\nmodule.exports = class extends Base {\n  indexAction() {\n    return this.display();\n  }\n  hw3Action() {\n    return this.display();\n  }\n  hw4Action() {\n    return this.display();\n  }\n  hw5Action() {\n    return this.display();\n  }\n  hw6Action() {\n    return this.display();\n  }\n  hw7Action() {\n    return this.display();\n  }\n  hw8Action() {\n    return this.display();\n  }\n  quizAction() {\n    return this.display();\n  }\n  gameAction() {\n    return this.display();\n  }\n  interactiveCubeAction() {\n    return this.display();\n  }\n  textAction() {\n    return this.display();\n  }\n  chartAction() {\n    return this.display();\n  }\n  lightAction() {\n    return this.display();\n  }\n  // reflectionAction() {\n  //   return this.display();\n  // }\n};\n"
+    ]
+}

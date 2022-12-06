@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Light Tracing Effect</title>
+  </head>
+  <body>
+    <div id="container"></div>
+    <script src="https://cdn.bootcss.com/three.js/102/three.min.js"></script>
+    <script src="/static/js/OrbitControls.js"></script>
+    <script>
+      // Set up the Three.js scene
+      const scene = new THREE.Scene()
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      )
+      // Set the position of the camera
+      camera.position.z = 1;
+    camera.position.x = 4;
+    camera.position.y = 3;
+    camera.lookAt(0, 0, 0);
+
+      const renderer = new THREE.WebGLRenderer()
+      // Set up the renderer
+      renderer.setSize(window.innerWidth, window.innerHeight)
+      document.getElementById('container').appendChild(renderer.domElement)
+      const clock = new THREE.Clock()
+
+      // Set up the 3D geometry for the iron ball and the wood walls
+      const ballGeometry = new THREE.SphereGeometry(1, 32, 32)
+      const wallsGeometry = new THREE.BoxGeometry(5, 5, 5)
+
+      // Set up the materials for the iron ball and the wood walls
+      const ballMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 })
+      const wallsMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 })
+
+      // Create the 3D objects for the iron ball and the wood walls
+      const ball = new THREE.Mesh(ballGeometry, ballMaterial)
+      const walls = new THREE.Mesh(wallsGeometry, wallsMaterial)
+
+      // Position the objects in the scene
+      ball.position.set(0, 1, 0)
+      walls.position.set(0, 0, 0)
+
+      // Add the objects to the scene
+      scene.add(ball)
+      scene.add(walls)
+
+      // Set up the light source for the scene
+      const light = new THREE.PointLight(0xffffff, 10, 100)
+      light.position.set(0, 2, 0)
+      scene.add(light)
+
+      // Set up the animation loop
+      const animate = function () {
+        requestAnimationFrame(animate)
+
+        // Move the light source around the ball and the walls
+        // light.position.x = Math.sin(clock.getElapsedTime()) * 5
+        // light.position.z = Math.cos(clock.getElapsedTime()) * 5
+
+        renderer.render(scene, camera)
+      }
+
+      // Start the animation loop
+      animate()
+    </script>
+  </body>
+</html>
